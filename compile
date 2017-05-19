@@ -1,0 +1,107 @@
+# BUILD FFMPEG
+
+sudo apt-get update
+sudo apt-get -y install autoconf automake build-essential libass-dev libfreetype6-dev \
+  libtheora-dev libtool libvorbis-dev pkg-config texinfo zlib1g-dev nasm
+
+SOURCE_DIR=$2/ffmpeg_sources
+BUILD_DIR=$2/ffmpeg_build
+
+if test ! -z $CI;
+then
+  FFMPEG_PATH=$TEST_FFMPEG_PATH
+fi
+
+echo "Looking for cached ffmpeg executable at $FFMPEG_PATH"
+if test ! -f $FFMPEG_PATH;
+then
+
+  echo "Could not find cache, building ffmpeg from source"
+
+  # Macos has ffmpeg in homebrew
+  if [[ "$OSTYPE" == "darwin" ]];
+  then
+    echo "Detected MacOS, installing ffmpeg using brew"
+    brew install ffmpeg
+    exit 0
+  fi
+
+  # Make some folders
+  if test -f $SOURCE_DIR;
+  then
+    rm -rf $SOURCE_DIR
+  fi
+  mkdir $SOURCE_DIR
+  if test -f $BUILD_DIR;
+  then
+    rm -rf $BUILD_DIR
+  fi
+  mkdir $BUILD_DIR
+
+
+  # Build source
+  cd $SOURCE_DIR
+  wget http://www.tortall.net/projects/yasm/releases/yasm-1.3.0.tar.gz
+  tar xzvf yasm-1.3.0.tar.gz
+  cd yasm-1.3.0
+  ./configure --prefix="$BUILD_DIR" --bindir="$BIN_DIR"
+  make
+  make install
+
+  cd $SOURCE_DIR
+  wget -O fdk-aac.tar.gz https://github.com/mstorsjo/fdk-aac/tarball/master
+  tar xzvf fdk-aac.tar.gz
+  cd mstorsjo-fdk-aac*
+  autoreconf -fiv
+  ./configure --prefix="$BUILD_DIR" --disable-shared
+  make
+  make install
+
+  cd $SOURCE_DIR
+  wget http://downloads.sourceforge.net/project/lame/lame/3.99/lame-3.99.5.tar.gz
+  tar xzvf lame-3.99.5.tar.gz
+  cd lame-3.99.5
+  ./configure --prefix="$BUILD_DIR" --enable-nasm --disable-shared
+  make
+  make install
+  #
+  # cd $SOURCE_DIR
+  # wget http://downloads.xiph.org/releases/opus/opus-1.1.4.tar.gz
+  # tar xzvf opus-1.1.4.tar.gz
+  # cd opus-1.1.4
+  # ./configure --prefix="$BUILD_DIR" --disable-shared
+  # make
+  # make install
+
+  # ffmpeg
+  cd $SOURCE_DIR
+  wget http://ffmpeg.org/releases/ffmpeg-snapshot.tar.bz2
+  tar xjvf ffmpeg-snapshot.tar.bz2
+
+  echo "Configuring ffmpeg"
+
+  cd $SOURCE_DIR/ffmpeg
+  PATH="$2/ffmpeg/bin:$PATH" PKG_CONFIG_PATH="$BUILD_DIR/lib/pkgconfig:$PKG_CONFIG_PATH" ./configure \
+    --prefix="$BUILD_DIR" \
+    --pkg-config="$PKG_CONFIG_PATH" \
+    --pkg-config-flags="--static" \
+    --extra-cflags="-I$BUILD_DIR/include" \
+    --extra-ldflags="-L$BUILD_DIR/lib" \
+    --bindir="$HOME/bin" \
+    --enable-gpl \
+    --enable-libass \
+    --enable-libfdk-aac \
+    --enable-libfreetype \
+    --enable-libmp3lame \
+    --enable-libtheora \
+    --enable-libvorbis \
+    --enable-nonfree
+  PATH="$2/ffmpeg/bin:$PATH" make
+  make install
+  hash -r
+
+fi
+
+
+# INSTALL NLTK CORPUS
+python -m nltk.downloader punkt
