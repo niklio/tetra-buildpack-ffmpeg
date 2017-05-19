@@ -18,6 +18,7 @@ apt-get -y install autoconf automake build-essential libass-dev libfreetype6-dev
 SOURCE_DIR=$2/ffmpeg_sources
 BUILD_DIR=$2/ffmpeg_build
 
+FFMPEG_PATH="$2/ffmpeg"
 echo "Looking for cached ffmpeg executable at $FFMPEG_PATH"
 if test ! -f $FFMPEG_PATH;
 then
@@ -87,7 +88,7 @@ then
   echo "Configuring ffmpeg"
 
   cd $SOURCE_DIR/ffmpeg
-  PATH="$2/ffmpeg/bin:$PATH" PKG_CONFIG_PATH="$BUILD_DIR/lib/pkgconfig:$PKG_CONFIG_PATH" ./configure \
+  PATH="$2:$PATH" PKG_CONFIG_PATH="$BUILD_DIR/lib/pkgconfig:$PKG_CONFIG_PATH" ./configure \
     --prefix="$BUILD_DIR" \
     --pkg-config="$PKG_CONFIG_PATH" \
     --pkg-config-flags="--static" \
@@ -102,12 +103,11 @@ then
     --enable-libtheora \
     --enable-libvorbis \
     --enable-nonfree
-  PATH="$2/ffmpeg/bin:$PATH" make
+  PATH="$2:$PATH" make
   make install
   hash -r
 
-fi
-
+figit add
 
 # INSTALL NLTK CORPUS
 python -m nltk.downloader punkt
