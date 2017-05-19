@@ -1,16 +1,27 @@
+export_env_dir() {
+  env_dir=$1
+  whitelist_regex=${2:-''}
+  blacklist_regex=${3:-'^(PATH|GIT_DIR|CPATH|CPPATH|LD_PRELOAD|LIBRARY_PATH)$'}
+  if [ -d "$env_dir" ]; then
+    for e in $(ls $env_dir); do
+      echo "$e" | grep -E "$whitelist_regex" | grep -qvE "$blacklist_regex" &&
+      export "$e=$(cat $env_dir/$e)"
+      :
+    done
+  fi
+}
+
+export_env_dir();
+
+
 # BUILD FFMPEG
 
-sudo apt-get update
-sudo apt-get -y install autoconf automake build-essential libass-dev libfreetype6-dev \
+apt-get update
+apt-get -y install autoconf automake build-essential libass-dev libfreetype6-dev \
   libtheora-dev libtool libvorbis-dev pkg-config texinfo zlib1g-dev nasm
 
 SOURCE_DIR=$2/ffmpeg_sources
 BUILD_DIR=$2/ffmpeg_build
-
-if test ! -z $CI;
-then
-  FFMPEG_PATH=$TEST_FFMPEG_PATH
-fi
 
 echo "Looking for cached ffmpeg executable at $FFMPEG_PATH"
 if test ! -f $FFMPEG_PATH;
